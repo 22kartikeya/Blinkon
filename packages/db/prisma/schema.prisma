@@ -1,0 +1,105 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String      @id @default(uuid())
+  email             String?     @unique
+  name              String?
+  image             String?
+  emailVerified     DateTime?
+  passwordHash      String?
+  sessions          Session[]   @relation("UserSessions")
+  account           Account[]   @relation("UserAccounts")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model Account {
+  id                String      @id @default(uuid())
+  userId            String
+  user              User        @relation("UserAccounts", fields: [userId], references: [id])
+  provider          String
+  providerAccountId String
+  refresh_token     String?     @db.Text
+  access_token      String?     @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?     @db.Text
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+} 
+
+model Project {
+  id                String      @id @default(uuid())
+  userId            String
+  title             String
+  description       String?
+  files             Json?    
+  version           Int         @default(1)
+  chat              Chat?       @relation("ProjectChat")
+  framework         projectFrame
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model Chat {
+  id                String      @id @default(uuid())
+  projectId         String      @unique
+  project           Project     @relation("ProjectChat", fields: [projectId], references: [id]) // one to one relation between chat and project
+  messages          Message[]   @relation("ChatMessages")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model Message {
+  id                String      @id @default(uuid())
+  chatId            String
+  chat              Chat        @relation("ChatMessages", fields: [chatId], references: [id])
+  role              ChatRole
+  content           String      @db.Text
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model Session {
+  id                String      @id @default(uuid())
+  userId            String
+  user              User        @relation("UserSessions", fields: [userId], references: [id])
+  socketId          String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model VerificationToken {
+  identifier        String
+  token             String      @unique
+  expires           DateTime
+  @@unique([identifier, token])
+}
+
+enum ChatRole {
+  USER
+  AI
+}
+
+enum projectFrame {
+  REACT
+  NEXT
+  NODE
+}
